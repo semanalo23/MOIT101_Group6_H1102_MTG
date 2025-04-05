@@ -1,24 +1,68 @@
 package ms2_mph_mtg;
 
 import java.util.Scanner;
+import java.time.LocalDate;
+import java.time.Period;
+import java.time.LocalTime;
+import java.time.Duration;
+import java.time.format.DateTimeFormatter;
 
 public class MotorPH_MS2_payrollcode {
 
-	public static void main(String[] args) {
-        Scanner inp = new Scanner(System.in);
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+
         long empNum;
         String empName = "Unknown";
         double hourSalary, weeklyTime, overtimeHours;
         double regPay, overtimePay, grossPay, netPay;
-        double sss, philHealth, pagIbig, incomeTax, totalDeductions;
+        double sss, philHealth, pagIbig, incomeTax, totalDeductions, lateDeduction = 0;
 
         System.out.print("Enter Employee No: ");
-        empNum = inp.nextLong();
+        empNum = scanner.nextLong();
         System.out.print("Enter hourly salary: ");
-        hourSalary = inp.nextDouble();
-        System.out.print("Enter Weekly Time (in hours): ");
-        weeklyTime = inp.nextDouble();
+        hourSalary = scanner.nextDouble();
 
+        // Consume newline left-over
+        scanner.nextLine();
+
+        // Birthdate input and age calculation
+        System.out.print("Enter birthdate (yyyy-MM-dd): ");
+        LocalDate birthDate = LocalDate.parse(scanner.nextLine());
+        int age = Period.between(birthDate, LocalDate.now()).getYears(); 
+
+        // Define time format
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
+        System.out.print("Enter login time (HH:mm): ");
+        LocalTime loginTime = LocalTime.parse(scanner.nextLine(), formatter);
+
+        System.out.print("Enter logout time (HH:mm): ");
+        LocalTime logoutTime = LocalTime.parse(scanner.nextLine(), formatter);
+
+        // 🔍 Fix for logout time: Assume anything before 06:00 is PM, not AM
+        if (logoutTime.isBefore(loginTime)) {
+            logoutTime = logoutTime.plusHours(12); // Convert to PM if needed
+        }
+
+        // Define grace period limit (8:10 AM)
+        LocalTime gracePeriodEnd = LocalTime.of(8, 10);
+
+        // Check if employee is late
+        boolean isLate = loginTime.isAfter(gracePeriodEnd);
+
+        if (isLate) {
+            System.out.println("⚠ Late login detected! Salary deduction will be applied.");
+        }
+
+        // Calculate working hours, minus 1 hour for lunch
+        Duration duration = Duration.between(loginTime, logoutTime).minusHours(1);
+        long hoursWorked = duration.toHours();
+        long minutesWorked = duration.toMinutesPart();
+        double decimalHours = hoursWorked + (minutesWorked / 60.0);
+
+        weeklyTime = decimalHours;
+
+        // Employee name based on ID
         switch ((int) empNum) {
             case 10001 -> empName = "Manuel Garcia III";
             case 10002 -> empName = "Antonio Lim";
@@ -54,9 +98,9 @@ public class MotorPH_MS2_payrollcode {
             case 100032 -> empName = "John Rafael Castro";
             case 100033 -> empName = "Carlos Ian Martinez";
             case 100034 -> empName = "Beatriz Santos";
-            
         }
 
+        // Calculate pay
         if (weeklyTime <= 40) {
             regPay = hourSalary * weeklyTime;
             overtimeHours = 0;
@@ -69,22 +113,33 @@ public class MotorPH_MS2_payrollcode {
 
         grossPay = regPay + overtimePay;
 
-        
-        sss = grossPay * 0.045; 
-        philHealth = grossPay * 0.03; 
-        pagIbig = 100; 
-        incomeTax = (grossPay - (sss + philHealth + pagIbig)) * 0.12; 
-        totalDeductions = sss + philHealth + pagIbig + incomeTax;
+        // Apply late deduction (1% of gross pay)
+        if (isLate) {
+            lateDeduction = grossPay * 0.01;
+        }
+
+        // Deductions
+        sss = grossPay * 0.045;
+        philHealth = grossPay * 0.03;
+        pagIbig = 100;
+        incomeTax = (grossPay - (sss + philHealth + pagIbig)) * 0.12;
+        totalDeductions = sss + philHealth + pagIbig + incomeTax + lateDeduction;
         netPay = grossPay - totalDeductions;
 
-     
-        System.out.println("======================");
+        // Output
+        System.out.println("\n======================");
         System.out.println("====PAYROLL SYSTEM====");
         System.out.println("======================");
         System.out.printf("Employee Number: %d\n", empNum);
         System.out.printf("Employee Name: %s\n", empName);
+        System.out.printf("Birthdate: %s (Age: %d)\n", birthDate, age); // 👈 NEW LINE (Age added)
         System.out.printf("Hourly Salary: %.2f\n", hourSalary);
-        System.out.printf("Weekly Hours: %.2f\n", weeklyTime);
+        System.out.printf("Login Time: %s\n", loginTime);
+        System.out.printf("Logout Time: %s\n", logoutTime);
+        System.out.printf("Total hours worked (excluding lunch): %.2f\n", decimalHours);
+        if (isLate) {
+            System.out.printf("Late Deduction: -%.2f\n", lateDeduction);
+        }
         System.out.printf("Regular Pay: %.2f\n", regPay);
         System.out.printf("Overtime Pay: %.2f\n", overtimePay);
         System.out.printf("Gross Pay: %.2f\n", grossPay);
